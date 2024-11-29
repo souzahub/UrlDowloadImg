@@ -34,30 +34,40 @@ app.get('/scrape-images', async (req, res) => {
   }
 
   try {
-    // Usando puppeteer-core com o caminho do Chromium
+    // Inicializa o Puppeteer
     const browser = await puppeteer.launch({
-      executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', // Substitua com o caminho do Chromium
+      executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', // Caminho para o Chromium (se necessário)
     });
     const page = await browser.newPage();
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
 
-    images = await page.evaluate(() => {
+    // Captura as URLs das imagens da página
+    const imgUrls = await page.evaluate(() => {
       const imgElements = document.querySelectorAll('img');
       let imgUrls = [];
+
       imgElements.forEach((img) => {
         const src = img.src;
         if (src && !src.startsWith('data:image/')) {
           imgUrls.push(src);
         }
       });
+
       return imgUrls;
     });
 
     await browser.close();
-    if (images.length === 0) {
+
+    // Usa um Set para remover duplicatas
+    const uniqueImages = [...new Set(imgUrls)];
+
+    if (uniqueImages.length === 0) {
       return res.status(404).json({ error: 'Nenhuma imagem encontrada.' });
     }
-    res.json({ images });
+
+    images = uniqueImages;  // Atualiza o array com as imagens únicas
+
+    res.json({ images: uniqueImages });
 
   } catch (error) {
     console.error('Erro ao acessar o site:', error);
@@ -66,6 +76,10 @@ app.get('/scrape-images', async (req, res) => {
 });
 
 app.get('/download-zip', async (req, res) => {
+  if (images.length === 0) {
+    return res.status(400).json({ error: 'Nenhuma imagem disponível para download.' });
+  }
+
   try {
     const zipFileName = 'images.zip';
     const zipFilePath = path.join(__dirname, zipFileName);
@@ -74,6 +88,7 @@ app.get('/download-zip', async (req, res) => {
 
     archive.pipe(output);
 
+    // Baixa as imagens e adiciona ao arquivo ZIP
     for (const imageUrl of images) {
       const fileName = path.basename(parse(imageUrl).pathname);
       const filePath = path.join(tempDir, fileName);
@@ -104,7 +119,7 @@ app.get('/download-zip', async (req, res) => {
         } else {
           clearTempDir();
           fs.unlinkSync(zipFilePath);
-          images = [];
+          images = []; // Reinicia a variável de imagens
         }
       });
     });
@@ -119,8 +134,3 @@ app.listen(port, async () => {
   console.log(`Servidor rodando em http://localhost:${port}`);
   await open(`http://localhost:${port}`);
 });
-
-// node index.js // Executaem tempo de projeto
-// pkg . --target node16-win-x64 // Gera o .EXE
-
-
