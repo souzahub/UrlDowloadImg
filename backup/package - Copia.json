@@ -1,0 +1,42 @@
+{
+  "name": "url",
+  "version": "1.0.0",
+  "main": "index.js",
+  "bin": {
+    "BaixaLink": "index.js"
+  },
+  "scripts": {
+  "start": "node index.js",
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "build": "pkg . --output dist/BaixaLink"
+},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "axios": "^1.7.8",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "download": "^8.0.0",
+    "express": "^4.21.1",
+    "open": "^8.0.3",
+    "puppeteer-core": "^23.9.0",
+    "fs-extra": "^11.1.1",
+    "path": "^0.12.7",
+    "dotenv": "^16.3.1"
+  },
+  "pkg": {
+    "scripts": "index.js",
+    "targets": ["node18-win-x64"],
+    "assets": [
+      "public/**/*",
+      "temp_images/**/*",
+      "node_modules/axios/**/*",
+      "node_modules/open/**/*",
+      "!node_modules/puppeteer-core/.local-chromium",
+      "!node_modules/open/xdg-open"
+    ]
+  }
+}
