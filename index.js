@@ -10,10 +10,10 @@ const { parse } = require('url');
 const app = express();
 const port = 3000;
 
-// Diretório temporário para armazenar as imagens
-const tempDir = path.join(__dirname, 'temp_images');
+// Define um diretório de trabalho externo ao snapshot
+const tempDir = path.join(process.cwd(), 'temp_images');
 if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir);
+  fs.mkdirSync(tempDir, { recursive: true });
 }
 
 let images = []; // Variável para armazenar as URLs das imagens
@@ -25,7 +25,13 @@ const clearTempDir = () => {
   });
 };
 
-app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
+  
+});
+
+app.use(express.static(path.join(process.cwd(), 'public')));
 
 app.get('/scrape-images', async (req, res) => {
   const { url: siteUrl } = req.query;
@@ -36,7 +42,7 @@ app.get('/scrape-images', async (req, res) => {
   try {
     // Inicializa o Puppeteer
     const browser = await puppeteer.launch({
-      executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', // Caminho para o Chromium (se necessário)
+      executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', // Caminho para o Chromium
     });
     const page = await browser.newPage();
     await page.goto(siteUrl, { waitUntil: 'networkidle2' });
@@ -58,14 +64,14 @@ app.get('/scrape-images', async (req, res) => {
 
     await browser.close();
 
-    // Usa um Set para remover duplicatas
+    // Remove duplicatas
     const uniqueImages = [...new Set(imgUrls)];
 
     if (uniqueImages.length === 0) {
       return res.status(404).json({ error: 'Nenhuma imagem encontrada.' });
     }
 
-    images = uniqueImages;  // Atualiza o array com as imagens únicas
+    images = uniqueImages; // Atualiza o array com as imagens únicas
 
     res.json({ images: uniqueImages });
 
@@ -82,13 +88,13 @@ app.get('/download-zip', async (req, res) => {
 
   try {
     const zipFileName = 'images.zip';
-    const zipFilePath = path.join(__dirname, zipFileName);
+    const zipFilePath = path.join(process.cwd(), zipFileName);
     const output = fs.createWriteStream(zipFilePath);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
     archive.pipe(output);
 
-    // Baixa as imagens e adiciona ao arquivo ZIP
+    // Baixa as imagens e adiciona ao ZIP
     for (const imageUrl of images) {
       const fileName = path.basename(parse(imageUrl).pathname);
       const filePath = path.join(tempDir, fileName);
@@ -128,6 +134,9 @@ app.get('/download-zip', async (req, res) => {
     res.status(500).json({ error: 'Erro ao criar o arquivo ZIP.' });
   }
 });
+
+// Evita que o processo termine imediatamente
+setInterval(() => {}, 1000);
 
 // Inicia o servidor e abre o navegador
 app.listen(port, async () => {
